@@ -17,9 +17,9 @@ app.use(bodyParser.urlencoded({extended:true}))
 
 //database
 const users = [
-    {id:1 , name:"shaan" , email :"s@gmail.com" ,password : "secret" },
-    {id:2 , name:"rahul" , email :"r@gmail.com" ,password : "secret" },
-    {id:3 , name:"nivesh" , email :"n@gmail.com" ,password : "secret" },
+    {id:1 , name:"shaan" , email :"s@gmail.com" ,password : "secret",role:"admin" },
+    {id:2 , name:"rahul" , email :"r@gmail.com" ,password : "secret",role:"user" },
+    {id:3 , name:"nivesh" , email :"n@gmail.com" ,password : "secret",role:"user"},
 ]
 
 //session configuration
@@ -32,6 +32,32 @@ app.use(session({
         maxAge : SESS_LIFETIME, //not mandatory
     }
 }))
+
+
+//middleware role check karne ke liye
+
+
+//middleware req.session waha se user ka data lene ke liye 
+app.use((req,res,next)=>{
+const {userId} = req.session;
+if(userId){
+    res.locals.user = users.find(user => user.id === userId)
+}
+next()
+})
+
+//middleware role check karne ke liye
+const checkRole =(role)=>{
+    return (req,res,next)=>{
+        const {user} = res.locals
+        if(user && user.role === role){
+            next()
+        }
+        else{
+            res.status(403).send("<h1> Unauthorized Access </h1>")
+        }
+    }
+}
 
 //middleware 
 const redirectLogin = (req,res,next)=>{
@@ -70,12 +96,14 @@ res.send(`
 })
 
 app.get("/home",redirectLogin,(req,res)=>{
+    const user= res.locals.user
 res.send(`
     <h1>Home</h1>
     <a href="/">Main</a>
     <ul>
-        <li>Name:</li>
-        <li>Email:</li>
+        <li>Name:${user.name}</li>
+        <li>Email:${user.email}</li>
+        <li>Role:${user.role}</li>
     </ul>
     `)
 })
@@ -104,6 +132,13 @@ app.get("/register",(req,res)=>{
          <a href="/login">Login</a>
     `)
 })
+
+
+//this is admin page 
+app.get("/admin",checkRole("admin"),(req,res)=>{
+    res.send(`<h1>THIS IS ADMIN PAGE</h1>`)
+})
+
 
 app.post("/login",(req,res)=>{
     const {email,password}  = req.body 
